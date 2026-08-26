@@ -24,6 +24,7 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 
 _model = None  # lazy singleton
+_index_cache: dict = {}  # paper_id -> {"mtime": float, "embeddings": np.ndarray, "chunks": list}
 
 
 class EmbeddingUnavailable(Exception):
@@ -105,20 +106,43 @@ def index_exists(paper_id: int) -> bool:
     return os.path.exists(emb_path) and os.path.exists(chunks_path)
 
 
+def _load_index(paper_id: int):
+    """
+    Loads a paper's embeddings + chunk metadata from disk, reusing an
+    in-memory copy when the index file hasn't changed since it was last
+    loaded. Every query against the same paper previously re-read and
+    re-parsed the same .npy/.json files from disk; the index is immutable
+    once built, so this is safe to cache.
+
+    Cache key includes the file's mtime, so a rebuilt index (e.g. after
+    reprocessing a paper) is picked up automatically on the next call
+    instead of serving stale data - no manual invalidation needed.
+    """
+    emb_path, chunks_path = _index_paths(paper_id)
+    if not (os.path.exists(emb_path) and os.path.exists(chunks_path)):
+        raise EmbeddingUnavailable("No semantic index found for this paper.")
+
+    mtime = os.path.getmtime(emb_path)
+    cached = _index_cache.get(paper_id)
+    if cached is not None and cached["mtime"] == mtime:
+        return cached["embeddings"], cached["chunks"]
+
+    embeddings = np.load(emb_path)
+    with open(chunks_path, "r", encoding="utf-8") as f:
+        chunk_meta = json.load(f)
+
+    _index_cache[paper_id] = {"mtime": mtime, "embeddings": embeddings, "chunks": chunk_meta}
+    return embeddings, chunk_meta
+
+
 def semantic_search(paper_id: int, query: str, top_k: int = 5):
     """
     Returns a list of dicts: {text, section_name, page_number, score}
     ranked by cosine similarity. Raises EmbeddingUnavailable if the model
     or index cannot be used, so the caller can fall back to keyword search.
     """
-    emb_path, chunks_path = _index_paths(paper_id)
-    if not (os.path.exists(emb_path) and os.path.exists(chunks_path)):
-        raise EmbeddingUnavailable("No semantic index found for this paper.")
-
+    embeddings, chunk_meta = _load_index(paper_id)
     model = _get_model()
-    embeddings = np.load(emb_path)
-    with open(chunks_path, "r", encoding="utf-8") as f:
-        chunk_meta = json.load(f)
 
     query_vec = model.encode([query], normalize_embeddings=True)[0]
     # embeddings are already normalized -> cosine similarity == dot product

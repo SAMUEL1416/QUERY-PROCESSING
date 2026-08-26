@@ -9,6 +9,7 @@ and (optionally) Kaggle, implementing the required fallback priority:
 Never invents a dataset, DOI, or URL: every result returned here traces back
 to a live response from one of the source services.
 """
+import concurrent.futures
 import difflib
 import logging
 from dataclasses import dataclass
@@ -47,14 +48,39 @@ def _similarity(a: str, b: str) -> float:
 
 
 def _collect_candidates(mentioned_name: str, limit_per_source: int = 5) -> List[dict]:
-    candidates = []
-    for source_name, search_fn in SOURCES:
-        try:
-            results = search_fn(mentioned_name, limit_per_source)
-        except Exception as exc:  # noqa: BLE001 - never let one source crash the whole search
-            logger.warning("%s search raised an exception: %s", source_name, exc)
-            results = []
-        candidates.extend(results)
+    """
+    Queries every dataset repository for this mention. Each provider is an
+    independent, synchronous HTTP call (see e.g. huggingface_service.search),
+    so running them concurrently on a small thread pool cuts wall-clock time
+    from "sum of every provider's latency" to "the slowest single provider",
+    with no change to which providers are queried, their parameters, or how
+    results are combined.
+
+    A failing provider is isolated exactly as before (logged, contributes no
+    candidates) and never blocks or cancels the others. Results are re-assembled
+    in the original SOURCES order so downstream tie-breaking (max() picks the
+    first-encountered best match) is unaffected by which provider happens to
+    respond first.
+    """
+    results_by_source: List[Optional[list]] = [None] * len(SOURCES)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(SOURCES)) as executor:
+        future_to_index = {
+            executor.submit(search_fn, mentioned_name, limit_per_source): idx
+            for idx, (_source_name, search_fn) in enumerate(SOURCES)
+        }
+        for future in concurrent.futures.as_completed(future_to_index):
+            idx = future_to_index[future]
+            source_name = SOURCES[idx][0]
+            try:
+                results_by_source[idx] = future.result()
+            except Exception as exc:  # noqa: BLE001 - never let one source crash the whole search
+                logger.warning("%s search raised an exception: %s", source_name, exc)
+                results_by_source[idx] = []
+
+    candidates: List[dict] = []
+    for results in results_by_source:
+        candidates.extend(results or [])
     return candidates
 
 

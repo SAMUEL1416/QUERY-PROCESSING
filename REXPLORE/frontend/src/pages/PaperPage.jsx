@@ -66,13 +66,29 @@ export default function PaperPage({ onOpenSidebar }) {
   const [tab, setTab] = useState('Overview')
 
   useEffect(() => {
-    const load = () => api.getPaper(id).then((r) => setPaper(r.data)).catch(() => {})
+    // Poll for live status_detail updates while the paper is processing.
+    // Keyed only on `id` (not on paper.status) so a status transition
+    // doesn't tear down and recreate this effect - that previously fired an
+    // extra immediate fetch on every transition and left a dangling 2s
+    // timer ticking forever even after the paper was ready. Same polling
+    // behavior and UI updates, just without the redundant requests/timer.
+    let cancelled = false
+    const load = () =>
+      api.getPaper(id).then((r) => {
+        if (cancelled) return
+        setPaper(r.data)
+        if (r.data.status === 'ready' || r.data.status === 'error') {
+          clearInterval(interval)
+        }
+      }).catch(() => {})
+
     load()
-    const interval = setInterval(() => {
-      if (!paper || paper.status !== 'ready') load()
-    }, 2000)
-    return () => clearInterval(interval)
-  }, [id, paper?.status])
+    const interval = setInterval(load, 2000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [id])
 
   if (!paper) {
     return (

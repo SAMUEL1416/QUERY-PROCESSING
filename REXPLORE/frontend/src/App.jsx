@@ -1,17 +1,31 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import Sidebar from './components/Sidebar'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
-import LibraryPage from './pages/LibraryPage'
-import UploadPage from './pages/UploadPage'
-import PaperPage from './pages/PaperPage'
-import ComparisonPage from './pages/ComparisonPage'
-import AnalyticsPage from './pages/AnalyticsPage'
-import ProfilePage from './pages/ProfilePage'
 import { useAuth } from './context/AuthContext'
+
+// Code-split everything below the first authenticated screen: none of these
+// are needed to paint the initial Dashboard, so keeping them out of the main
+// bundle shrinks the JS the browser must download/parse before first render.
+// Dashboard/Login/Register stay eager since one of them is always the first
+// screen a visitor sees.
+const LibraryPage = lazy(() => import('./pages/LibraryPage'))
+const UploadPage = lazy(() => import('./pages/UploadPage'))
+const PaperPage = lazy(() => import('./pages/PaperPage'))
+const ComparisonPage = lazy(() => import('./pages/ComparisonPage'))
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+
+function RouteLoader() {
+  return (
+    <div className="app-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+      <Loader2 size={26} className="spin" />
+    </div>
+  )
+}
 
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -52,17 +66,19 @@ export default function App() {
         onToggleTheme={toggleTheme}
       />
       <main className="app-main">
-        <Routes>
-          <Route path="/login" element={<Navigate to="/" replace />} />
-          <Route path="/register" element={<Navigate to="/" replace />} />
-          <Route path="/" element={<Dashboard onOpenSidebar={() => setSidebarOpen(true)} />} />
-          <Route path="/library" element={<LibraryPage onOpenSidebar={() => setSidebarOpen(true)} />} />
-          <Route path="/upload" element={<UploadPage onOpenSidebar={() => setSidebarOpen(true)} />} />
-          <Route path="/papers/:id" element={<PaperPage onOpenSidebar={() => setSidebarOpen(true)} />} />
-          <Route path="/comparison" element={<ComparisonPage onOpenSidebar={() => setSidebarOpen(true)} />} />
-          <Route path="/analytics" element={<AnalyticsPage onOpenSidebar={() => setSidebarOpen(true)} />} />
-          <Route path="/profile" element={<ProfilePage onOpenSidebar={() => setSidebarOpen(true)} />} />
-        </Routes>
+        <Suspense fallback={<RouteLoader />}>
+          <Routes>
+            <Route path="/login" element={<Navigate to="/" replace />} />
+            <Route path="/register" element={<Navigate to="/" replace />} />
+            <Route path="/" element={<Dashboard onOpenSidebar={() => setSidebarOpen(true)} />} />
+            <Route path="/library" element={<LibraryPage onOpenSidebar={() => setSidebarOpen(true)} />} />
+            <Route path="/upload" element={<UploadPage onOpenSidebar={() => setSidebarOpen(true)} />} />
+            <Route path="/papers/:id" element={<PaperPage onOpenSidebar={() => setSidebarOpen(true)} />} />
+            <Route path="/comparison" element={<ComparisonPage onOpenSidebar={() => setSidebarOpen(true)} />} />
+            <Route path="/analytics" element={<AnalyticsPage onOpenSidebar={() => setSidebarOpen(true)} />} />
+            <Route path="/profile" element={<ProfilePage onOpenSidebar={() => setSidebarOpen(true)} />} />
+          </Routes>
+        </Suspense>
       </main>
     </div>
   )

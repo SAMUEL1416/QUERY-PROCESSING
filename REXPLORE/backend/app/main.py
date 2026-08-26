@@ -14,7 +14,6 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.database import init_db
@@ -113,13 +112,43 @@ async def frontend_root():
     return FileResponse(index_file)
 
 
-# Serve React static files
-if FRONTEND_DIST.exists():
-    app.mount(
-        "/",
-        StaticFiles(
-            directory=str(FRONTEND_DIST),
-            html=True,
-        ),
-        name="frontend",
-    )
+# ---------------------------------------------------------
+# SPA fallback for every other GET route
+# ---------------------------------------------------------
+#
+# ReXplore's routes (/login, /upload, /papers/5, /profile, ...) only exist
+# client-side, in React Router. Before this route, this backend had no
+# catch-all: `StaticFiles(html=True)` mounted at "/" only serves *literal*
+# files, so any direct navigation, browser refresh, bookmark, or hard
+# redirect (e.g. api.js sending an expired session to /login via
+# `window.location.href`) landed on a raw 404 JSON page with no way back
+# into the app short of manually editing the URL back to "/".
+#
+# This route is registered last (after every /api/* router above), so
+# FastAPI still matches real API paths first. For anything else it serves
+# the actual built file when one exists (JS/CSS/images from `vite build`),
+# and otherwise serves index.html so React Router can render the right
+# screen for the requested URL - restoring normal SPA refresh/deep-link
+# behavior without changing any API route, name, or response contract.
+_FRONTEND_DIST_RESOLVED = FRONTEND_DIST.resolve()
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def spa_fallback(full_path: str):
+    # Never swallow a genuinely-missing API route into the SPA fallback -
+    # keep returning a normal 404 for those, same as before.
+    if full_path == "api" or full_path.startswith("api/"):
+        return JSONResponse(status_code=404, content={"detail": "Not Found"})
+
+    if full_path:
+        candidate = (FRONTEND_DIST / full_path).resolve()
+        if candidate.is_relative_to(_FRONTEND_DIST_RESOLVED) and candidate.is_file():
+            return FileResponse(candidate)
+
+    index_file = FRONTEND_DIST / "index.html"
+    if not index_file.exists():
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Frontend has not been built yet."},
+        )
+    return FileResponse(index_file)

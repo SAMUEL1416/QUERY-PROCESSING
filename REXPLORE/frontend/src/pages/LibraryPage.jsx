@@ -17,10 +17,33 @@ export default function LibraryPage({ onOpenSidebar }) {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const load = () => api.listPapers().then((r) => setPapers(r.data)).catch(() => setPapers([]))
+    // Poll while any paper is still processing so status badges update live;
+    // stop once everything is in a terminal state (ready/error) instead of
+    // polling GET /api/papers forever for the whole time this page stays
+    // open. Re-opening the page (or uploading a new paper, which navigates
+    // here) re-mounts this effect and resumes polling as needed.
+    let cancelled = false
+    let interval = null
+
+    const hasActivePaper = (list) => list.some((p) => p.status !== 'ready' && p.status !== 'error')
+
+    const load = () =>
+      api.listPapers().then((r) => {
+        if (cancelled) return
+        setPapers(r.data)
+        if (interval && !hasActivePaper(r.data)) {
+          clearInterval(interval)
+          interval = null
+        }
+      }).catch(() => { if (!cancelled) setPapers([]) })
+
     load()
-    const interval = setInterval(load, 4000)
-    return () => clearInterval(interval)
+    interval = setInterval(load, 4000)
+
+    return () => {
+      cancelled = true
+      if (interval) clearInterval(interval)
+    }
   }, [])
 
   return (

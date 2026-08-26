@@ -64,7 +64,7 @@ class PaperSection(Base):
     __tablename__ = "paper_sections"
 
     id = Column(Integer, primary_key=True, index=True)
-    paper_id = Column(Integer, ForeignKey("papers.id"), nullable=False)
+    paper_id = Column(Integer, ForeignKey("papers.id"), nullable=False, index=True)
     name = Column(String, nullable=False)
     page_number = Column(Integer, nullable=True)
     order_index = Column(Integer, default=0)
@@ -81,7 +81,7 @@ class PaperFeature(Base):
     __tablename__ = "paper_features"
 
     id = Column(Integer, primary_key=True, index=True)
-    paper_id = Column(Integer, ForeignKey("papers.id"), nullable=False)
+    paper_id = Column(Integer, ForeignKey("papers.id"), nullable=False, index=True)
     feature_type = Column(String, nullable=False)  # algorithm, dataset, metric, concept, keyword, technique, technology
     value = Column(String, nullable=False)
     context = Column(Text, default="")
@@ -95,7 +95,7 @@ class Dataset(Base):
     __tablename__ = "datasets"
 
     id = Column(Integer, primary_key=True, index=True)
-    paper_id = Column(Integer, ForeignKey("papers.id"), nullable=False)
+    paper_id = Column(Integer, ForeignKey("papers.id"), nullable=False, index=True)
     mentioned_name = Column(String, nullable=False)     # name as found in the paper
     kind = Column(String, default="not_found")           # original, alternative, synthetic, not_found
     status = Column(String, default="unresolved")         # available, unavailable, unresolved
@@ -115,7 +115,7 @@ class QueryHistory(Base):
     __tablename__ = "query_history"
 
     id = Column(Integer, primary_key=True, index=True)
-    paper_id = Column(Integer, ForeignKey("papers.id"), nullable=False)
+    paper_id = Column(Integer, ForeignKey("papers.id"), nullable=False, index=True)
     query_text = Column(Text, nullable=False)
     answer_text = Column(Text, nullable=False)
     retrieval_method = Column(String, default="semantic")  # semantic, keyword_fallback
@@ -129,7 +129,7 @@ class QuerySource(Base):
     __tablename__ = "query_sources"
 
     id = Column(Integer, primary_key=True, index=True)
-    query_id = Column(Integer, ForeignKey("query_history.id"), nullable=False)
+    query_id = Column(Integer, ForeignKey("query_history.id"), nullable=False, index=True)
     section_name = Column(String, nullable=False)
     page_number = Column(Integer, nullable=True)
     snippet = Column(Text, default="")
@@ -142,8 +142,8 @@ class SyntheticDataset(Base):
     __tablename__ = "synthetic_datasets"
 
     id = Column(Integer, primary_key=True, index=True)
-    dataset_id = Column(Integer, ForeignKey("datasets.id"), nullable=False)
-    paper_id = Column(Integer, ForeignKey("papers.id"), nullable=False)
+    dataset_id = Column(Integer, ForeignKey("datasets.id"), nullable=False, index=True)
+    paper_id = Column(Integer, ForeignKey("papers.id"), nullable=False, index=True)
     row_count = Column(Integer, nullable=False)
     columns = Column(JSON, default=list)   # list[{"name": str, "type": str}]
     seed = Column(Integer, default=42)

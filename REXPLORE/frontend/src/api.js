@@ -5,10 +5,15 @@ const client = axios.create({
   timeout: 30000,
 })
 
-// Uploads / long-running semantic-index building can take longer.
+// Uploads / long-running semantic-index building can take longer -
+// scanned PDFs go through OCR + embedding generation, which the app
+// itself advertises support for up to 50MB. 120s was cutting off large
+// or scanned papers before the backend had a real chance to finish;
+// 5 minutes gives that legitimate work room without masking an actually
+// broken/hung request forever.
 const longClient = axios.create({
   baseURL: '/api',
-  timeout: 120000,
+  timeout: 300000,
 })
 
 export function setAuthToken(token) {

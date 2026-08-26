@@ -42,7 +42,11 @@ export default function PaperUpload() {
       setStatusDetail(res.data.status_detail || 'Uploading')
     } catch (err) {
       setUploading(false)
-      setError(err?.response?.data?.detail || 'Upload failed. Please try again.')
+      if (err?.code === 'ECONNABORTED') {
+        setError('This is taking longer than expected. Large or scanned PDFs can take a few minutes to process - please try again, and keep this tab open while it runs.')
+      } else {
+        setError(err?.response?.data?.detail || 'Upload failed. Please try again.')
+      }
     }
   }, [])
 
@@ -119,7 +123,10 @@ export default function PaperUpload() {
             {!paperId && (
               <div className="processing-stage current">
                 <Loader2 className="stage-icon" size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
-                Uploading ({uploadPct}%)
+                <span>
+                  Uploading ({uploadPct}%)
+                  <span className="processing-stage-hint">Large or scanned PDFs can take a few minutes - please keep this tab open.</span>
+                </span>
               </div>
             )}
             {paperId && STAGE_LABELS.map((label, idx) => {

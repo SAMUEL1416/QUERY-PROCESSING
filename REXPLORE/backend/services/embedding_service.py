@@ -106,6 +106,17 @@ def index_exists(paper_id: int) -> bool:
     return os.path.exists(emb_path) and os.path.exists(chunks_path)
 
 
+def warm_up():
+    """
+    Loads the embedding model into memory now, if it isn't already.
+    Call this once at process startup (see app/main.py) so the slow,
+    one-time sentence-transformers import + weight load happens during
+    boot instead of blocking the first paper's "Building Semantic Index"
+    stage.
+    """
+    _get_model()
+
+
 def _load_index(paper_id: int):
     """
     Loads a paper's embeddings + chunk metadata from disk, reusing an

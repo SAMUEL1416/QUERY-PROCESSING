@@ -9,6 +9,7 @@ Production:
 """
 
 import logging
+import threading
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -18,6 +19,7 @@ from fastapi.responses import JSONResponse, FileResponse
 from app.config import get_settings
 from app.database import init_db
 from routers import auth, papers, queries, datasets, analytics
+from services import embedding_service
 
 
 logging.basicConfig(
@@ -62,6 +64,31 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 def on_startup():
     init_db()
     logger.info("ReXplore backend started. Database initialized.")
+
+    # Warm the embedding model in the background instead of leaving it to
+    # load lazily on the first paper's "Building Semantic Index" stage.
+    # Importing sentence-transformers/torch and loading model weights is a
+    # one-time cost (~10-30s) in a fresh process. On hosts that spin down
+    # when idle (e.g. Render's free tier), every wake-up IS a fresh
+    # process, so without this, whichever paper happens to be first after
+    # each wake pays that cost on top of its own real encoding work - which
+    # is what makes "Building Semantic Index" look consistently slow even
+    # though the model only truly needs loading once per process.
+    #
+    # Runs on a background thread (not blocking startup/the health check)
+    # so Render still sees the service come up promptly; the model is very
+    # likely already warm by the time a user gets around to uploading.
+    def _warm_up_embedding_model():
+        try:
+            embedding_service.warm_up()
+            logger.info("Embedding model warmed up.")
+        except Exception as exc:  # noqa: BLE001
+            # Don't crash startup if the model can't load (e.g. no network
+            # on first run) - papers fall back to keyword search exactly as
+            # before via EmbeddingUnavailable.
+            logger.warning("Could not warm up embedding model at startup: %s", exc)
+
+    threading.Thread(target=_warm_up_embedding_model, daemon=True).start()
 
 
 @app.get("/api/health", tags=["health"])

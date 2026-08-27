@@ -1,0 +1,143 @@
+/* ============================================================
+   ReXplore — Design Tokens
+   Palette: deep navy/indigo core with an indigo→violet accent duo.
+   Type: Sora (display) / Inter (body) / JetBrains Mono (data, refs, DOIs)
+   Signature motif: monospace "citation chips" (Page N · Section) and a
+   connected-node workflow rail, echoing a paper's own citation graph.
+   ============================================================ */
+
+:root {
+  /* ---------- Brand palette (named) ---------- */
+  --navy-950: #070b14;
+  --navy-900: #0c1120;
+  --navy-850: #10162a;
+  --navy-800: #151d33;
+  --navy-700: #1c2540;
+  --navy-600: #29335a;
+  --navy-500: #3c4a7a;
+  --slate-400: #7b87a8;
+  --slate-300: #a4aec9;
+  --slate-100: #dde2f0;
+
+  --indigo-600: #4a4fd6;
+  --indigo-500: #5b5ff5;
+  --indigo-400: #7b7ffb;
+  --violet-400: #9c7dff;
+  --violet-300: #b79dff;
+
+  --amber-400: #f0b429;
+  --emerald-400: #34d399;
+  --rose-400: #fb7185;
+  --sky-400: #38bdf8;
+
+  --white: #ffffff;
+  --ink-50: #f6f7fc;
+  --ink-100: #eef0fa;
+
+  /* ---------- Typography ---------- */
+  --font-display: "Sora", "Segoe UI", sans-serif;
+  --font-body: "Inter", "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-base: 0.9375rem;
+  --fs-md: 1.0625rem;
+  --fs-lg: 1.25rem;
+  --fs-xl: 1.625rem;
+  --fs-2xl: 2.125rem;
+  --fs-3xl: 2.875rem;
+
+  --lh-tight: 1.15;
+  --lh-snug: 1.35;
+  --lh-normal: 1.6;
+
+  /* ---------- Spacing scale ---------- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+  --sp-20: 80px;
+
+  /* ---------- Radius ---------- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
+
+  /* ---------- Shadow ---------- */
+  --shadow-sm: 0 1px 2px rgba(7, 11, 20, 0.35);
+  --shadow-md: 0 8px 24px rgba(7, 11, 20, 0.28);
+  --shadow-lg: 0 20px 48px rgba(7, 11, 20, 0.38);
+  --shadow-glow: 0 0 0 1px rgba(91, 95, 245, 0.35), 0 8px 32px rgba(91, 95, 245, 0.18);
+
+  /* ---------- Motion ---------- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 140ms;
+  --dur-base: 240ms;
+  --dur-slow: 420ms;
+
+  /* ---------- Semantic (dark mode default) ---------- */
+  --bg-app: var(--navy-950);
+  --bg-surface: var(--navy-900);
+  --bg-elevated: var(--navy-850);
+  --bg-inset: var(--navy-800);
+  --border-subtle: rgba(164, 174, 201, 0.12);
+  --border-default: rgba(164, 174, 201, 0.18);
+  --border-strong: rgba(164, 174, 201, 0.3);
+
+  --text-primary: var(--ink-100);
+  --text-secondary: var(--slate-300);
+  --text-muted: var(--slate-400);
+  --text-on-accent: #ffffff;
+
+  --accent-primary: var(--indigo-500);
+  --accent-primary-hover: var(--indigo-400);
+  --accent-secondary: var(--violet-400);
+  --accent-gradient: linear-gradient(135deg, var(--indigo-500) 0%, var(--violet-400) 100%);
+
+  --status-success: var(--emerald-400);
+  --status-warning: var(--amber-400);
+  --status-danger: var(--rose-400);
+  --status-info: var(--sky-400);
+
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg-app: var(--ink-50);
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-inset: var(--ink-100);
+  --border-subtle: rgba(21, 29, 51, 0.08);
+  --border-default: rgba(21, 29, 51, 0.12);
+  --border-strong: rgba(21, 29, 51, 0.22);
+
+  --text-primary: var(--navy-950);
+  --text-secondary: #3a4258;
+  --text-muted: #6b7690;
+  --text-on-accent: #ffffff;
+
+  --shadow-sm: 0 1px 2px rgba(21, 29, 51, 0.06);
+  --shadow-md: 0 8px 24px rgba(21, 29, 51, 0.08);
+  --shadow-lg: 0 20px 48px rgba(21, 29, 51, 0.12);
+  --shadow-glow: 0 0 0 1px rgba(91, 95, 245, 0.25), 0 8px 32px rgba(91, 95, 245, 0.12);
+
+  color-scheme: light;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+}
